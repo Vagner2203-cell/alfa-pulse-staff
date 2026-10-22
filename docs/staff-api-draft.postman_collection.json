@@ -1,0 +1,218 @@
+{
+  "info": {
+    "name": "ALFA PULSE Staff API (DRAFT, not implemented)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Demonstration contract only. Not callable until backend integration."
+  },
+  "item": [
+    {
+      "name": "Очередь заявок",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/api/v1/staff/applications",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "staff",
+            "applications"
+          ]
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Карточка заявки",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/api/v1/staff/applications/{{application_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "staff",
+            "applications",
+            "{{application_id}}"
+          ]
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Скоринг",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/api/v1/staff/applications/{{application_id}}/score",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "staff",
+            "applications",
+            "{{application_id}}",
+            "score"
+          ]
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Документы",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/api/v1/staff/applications/{{application_id}}/documents",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "staff",
+            "applications",
+            "{{application_id}}",
+            "documents"
+          ]
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "История",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/api/v1/staff/applications/{{application_id}}/history",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "staff",
+            "applications",
+            "{{application_id}}",
+            "history"
+          ]
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Решение",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{base_url}}/api/v1/staff/applications/{{application_id}}/decision",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "staff",
+            "applications",
+            "{{application_id}}",
+            "decision"
+          ]
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"request_documents\",\n  \"version\": 1,\n  \"reason\": \"Нужна выписка по счёту\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Альтернативное предложение",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{base_url}}/api/v1/staff/applications/{{application_id}}/alternative-offer",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "staff",
+            "applications",
+            "{{application_id}}",
+            "alternative-offer"
+          ]
+        },
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 850000,\n  \"term\": 12,\n  \"version\": 1,\n  \"reason\": \"Снижение платёжной нагрузки\"\n}"
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "application_id",
+      "value": "AP-1048"
+    },
+    {
+      "key": "token",
+      "value": "REPLACE_ME"
+    }
+  ]
+}

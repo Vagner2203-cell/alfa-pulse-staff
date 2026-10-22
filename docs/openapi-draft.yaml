@@ -1,0 +1,150 @@
+openapi: 3.0.3
+info:
+  title: ALFA PULSE Staff API — DRAFT / NOT IMPLEMENTED
+  version: 0.1.0-draft
+  description: Проектный контракт для интеграции кабинета сотрудника с backend команды; это НЕ работающий API.
+servers:
+  - url: http://localhost:8000
+    description: Proposed backend address (not supplied by this package)
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/staff/applications:
+    get:
+      summary: Получить очередь заявок
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: {type: string}
+        - name: product
+          in: query
+          required: false
+          schema: {type: string}
+      responses:
+        '200':
+          description: Очередь заявок
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/Application'}
+        '401': {description: Неавторизован}
+        '403': {description: Недостаточно прав}
+  /api/v1/staff/applications/{id}:
+    get:
+      summary: Получить заявку
+      parameters: [{ $ref: '#/components/parameters/ApplicationId' }]
+      responses:
+        '200':
+          description: Заявка
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Application'}
+        '404': {description: Не найдена}
+  /api/v1/staff/applications/{id}/score:
+    get:
+      summary: Балл и причины
+      parameters: [{ $ref: '#/components/parameters/ApplicationId' }]
+      responses:
+        '200':
+          description: Объяснимый скоринг
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Score'}
+  /api/v1/staff/applications/{id}/documents:
+    get:
+      summary: Список документов и запросов
+      parameters: [{ $ref: '#/components/parameters/ApplicationId' }]
+      responses:
+        '200':
+          description: Документы и запросы
+          content:
+            application/json:
+              schema: {type: array, items: {type: object}}
+  /api/v1/staff/applications/{id}/history:
+    get:
+      summary: История решений
+      parameters: [{ $ref: '#/components/parameters/ApplicationId' }]
+      responses:
+        '200':
+          description: События
+          content:
+            application/json:
+              schema: {type: array, items: {type: object}}
+  /api/v1/staff/applications/{id}/decision:
+    post:
+      summary: Принять решение сотрудника
+      parameters: [{ $ref: '#/components/parameters/ApplicationId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/DecisionRequest'}
+      responses:
+        '200':
+          description: Обновлённая заявка
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Application'}
+        '409': {description: Конфликт версии или запрещённый переход}
+  /api/v1/staff/applications/{id}/alternative-offer:
+    post:
+      summary: Предложить альтернативную сумму и срок
+      parameters: [{ $ref: '#/components/parameters/ApplicationId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AlternativeOfferRequest'}
+      responses:
+        '200':
+          description: Новые условия предложения
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Application'}
+        '409': {description: Конфликт версии или запрещённый переход}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer}
+  parameters:
+    ApplicationId:
+      name: id
+      in: path
+      required: true
+      schema: {type: string}
+  schemas:
+    Application:
+      type: object
+      required: [id, company, product, amount, term, status, version]
+      properties:
+        id: {type: string, example: AP-1048}
+        company: {type: string, example: ООО «Северный склад»}
+        product: {type: string, enum: [Оборотный кредит, Овердрафт]}
+        amount: {type: number, minimum: 0}
+        term: {type: integer, minimum: 1}
+        status: {type: string, example: На проверке}
+        version: {type: integer, minimum: 1}
+        score: {type: integer, minimum: 0, maximum: 100}
+    Score:
+      type: object
+      required: [score, reasons]
+      properties:
+        score: {type: integer, minimum: 0, maximum: 100}
+        reasons: {type: array, items: {type: string}}
+        rulesVersion: {type: string}
+    DecisionRequest:
+      type: object
+      required: [action, version, reason]
+      properties:
+        action: {type: string, enum: [approve, reject, request_documents]}
+        version: {type: integer, minimum: 1}
+        reason: {type: string, minLength: 1}
+    AlternativeOfferRequest:
+      type: object
+      required: [amount, term, version, reason]
+      properties:
+        amount: {type: number, minimum: 1}
+        term: {type: integer, minimum: 1}
+        version: {type: integer, minimum: 1}
+        reason: {type: string, minLength: 1}

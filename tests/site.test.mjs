@@ -1,0 +1,16 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+const dir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const html=fs.readFileSync(path.join(dir,'index.html'),'utf8');
+const apps=JSON.parse(fs.readFileSync(path.join(dir,'examples','synthetic_applications.json'),'utf8'));
+test('root index.html exists with Russian lang',()=>{assert.match(html,/<html lang="ru">/);assert.match(html,/<title>ALFA PULSE/)});
+test('logo uses single SVG pulse icon',()=>{assert.match(html,/class="brand-mark"/);assert.match(html,/<svg viewBox="0 0 64 64"/);assert.ok(!html.includes('class="brand-mark">A</div>'));});
+test('staff demo contains queue, filters and decision controls',()=>{for(const v of ['id="tbody"','id="search"','id="status-filter"','id="product-filter"','id="score-filter"','data-action="approve"','data-action="reject"','data-action="docs"','data-action="offer"'])assert.ok(html.includes(v),v)});
+test('data is synthetically seeded: 8 distinct applications',()=>{assert.equal(apps.length,8);assert.equal(new Set(apps.map(a=>a.id)).size,8);});
+test('two credit products and all scoring levels',()=>{assert.ok(apps.some(a=>a.product==='Оборотный кредит'));assert.ok(apps.some(a=>a.product==='Овердрафт'));assert.ok(apps.some(a=>a.score>=80));assert.ok(apps.some(a=>a.score>=50&&a.score<80));assert.ok(apps.some(a=>a.score<50));});
+test('all example records contain reasons and expected fields',()=>{for(const a of apps){for(const field of ['company','product','amount','term','score','status','reasons','history'])assert.ok(a[field]!==undefined,`${a.id}:${field}`);assert.ok(Array.isArray(a.reasons)&&a.reasons.length>0);}});
+test('docker image references repository-root HTML',()=>{const d=fs.readFileSync(path.join(dir,'Dockerfile'),'utf8');assert.match(d,/COPY index\.html /);});
+test('publication does not depend on extra JS packages',()=>{assert.ok(!/<script[^>]+src=/.test(html));assert.ok(!/<link[^>]+href=["']https?:/.test(html));});
