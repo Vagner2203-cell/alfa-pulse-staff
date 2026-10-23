@@ -286,8 +286,21 @@ function escapeHtml(value){
  return String(value ?? "").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
 function log(text,icon="✓"){ activityLog.unshift({icon,text,time:"Только что"}); render(); }
+const STAFF_NOTE_MARKER = "\n\n[Комментарий сотрудника]\n";
+function splitStoredNotes(value){
+ const raw = String(value || "");
+ const index = raw.indexOf(STAFF_NOTE_MARKER);
+ if(index < 0) return {client: raw, staff: ""};
+ return {client: raw.slice(0,index), staff: raw.slice(index + STAFF_NOTE_MARKER.length)};
+}
+function combineStoredNotes(clientNote, staffNote){
+ const client = String(clientNote || "").trim();
+ const staff = String(staffNote || "").trim();
+ return staff ? `${client}${STAFF_NOTE_MARKER}${staff}` : client;
+}
 function openDrawer(id){
  selectedId=String(id); const a=apps.find(x=>x.id===selectedId); if(!a)return;
+ const noteParts = splitStoredNotes(a.notes);
  $("drawer").innerHTML=`<div class="drawer-top"><div><div class="crumb">ЗАЯВКА / #${escapeHtml(a.id)}</div><h2>${escapeHtml(a.company)}</h2><div style="margin-top:10px"><span class="status ${statusClass(a.status)}">${escapeHtml(statusLabel(a.status))}</span></div></div><button class="close" id="close-drawer">×</button></div>
  <div class="drawer-section"><h3>Параметры заявки</h3><div class="detail-grid">
  <div><div class="detail-label">Продукт</div><div class="detail-value">${escapeHtml(a.product)}</div></div>
@@ -298,7 +311,7 @@ function openDrawer(id){
  <div><div class="detail-label">Месячная выручка</div><div class="detail-value">${a.revenue == null ? "Не указана" : money(a.revenue)}</div></div>
  <div><div class="detail-label">Создана</div><div class="detail-value">${escapeHtml(a.created)}</div></div>
  <div><div class="detail-label">ID в базе</div><div class="detail-value">#${escapeHtml(a.id)}</div></div></div></div>
- <div class="drawer-section"><h3>Комментарий клиента</h3><div class="reason"><span>▧</span><span>${a.notes ? escapeHtml(a.notes) : "Комментарий не указан"}</span></div></div>
+ <div class="drawer-section"><h3>Комментарий клиента</h3><div class="reason"><span>▧</span><span>${noteParts.client ? escapeHtml(noteParts.client) : "Комментарий не указан"}</span></div></div>
  <div class="drawer-section"><h3>Финансовая оценка</h3><p style="font-size:12px;color:#788193">Скоринговый балл, отрасль, возраст бизнеса, документы и причины решения не предоставляются текущим API. Они не рассчитываются и не отображаются как реальные данные.</p></div>
  <div class="drawer-section"><h3>Обработка заявки</h3>
  <p style="font-size:12px;color:#788193">Выберите новый статус. Изменение будет сохранено в базе через backend ALFA PULSE.</p>
@@ -313,7 +326,10 @@ function openDrawer(id){
    <option value="contract_demo">Договор (демо)</option>
    <option value="disbursed_demo">Выдана (демо)</option>
  </select>
- <button id="save-status-btn" type="button" style="width:100%;margin-top:12px;padding:12px;border:0;border-radius:8px;background:#b00020;color:#fff;font-weight:600;cursor:pointer">Сохранить статус</button>
+ <label for="staff-comment" style="display:block;font-size:12px;font-weight:600;margin:14px 0 6px">Комментарий сотрудника</label>
+ <textarea id="staff-comment" maxlength="4000" rows="4" placeholder="Напишите комментарий, причину решения или следующий шаг…" style="width:100%;box-sizing:border-box;padding:11px;border:1px solid #d8dee8;border-radius:8px;resize:vertical;font:inherit">${escapeHtml(noteParts.staff)}</textarea>
+ <p style="font-size:11px;color:#788193;margin-top:5px">Комментарий сохраняется вместе со статусом. Исходный комментарий клиента сохраняется отдельно внутри записи.</p>
+ <button id="save-status-btn" type="button" style="width:100%;margin-top:12px;padding:12px;border:0;border-radius:8px;background:#b00020;color:#fff;font-weight:600;cursor:pointer">Сохранить статус и комментарий</button>
  <p id="status-save-message" role="status" style="font-size:12px;margin-top:10px"></p>
  </div>`;
  const statusSelect = $("application-status");
@@ -323,6 +339,8 @@ function openDrawer(id){
  if(saveButton){
    saveButton.onclick = async () => {
      const newStatus = statusSelect.value;
+     const staffComment = $("staff-comment")?.value || "";
+     const combinedNotes = combineStoredNotes(noteParts.client, staffComment);
      saveButton.disabled = true;
      saveButton.textContent = "Сохранение…";
      statusMessage.textContent = "";
@@ -331,7 +349,7 @@ function openDrawer(id){
        const response = await fetch(`${API_BASE}/api/applications/${encodeURIComponent(a.id)}/status`, {
          method: "PATCH",
          headers: {"Content-Type":"application/json", "Accept":"application/json"},
-         body: JSON.stringify({status:newStatus})
+         body: JSON.stringify({status:newStatus, notes:combinedNotes})
        });
        const result = await response.json().catch(() => ({}));
        if(!response.ok){
@@ -341,7 +359,7 @@ function openDrawer(id){
        // PATCH confirmed by backend. Update local UI immediately, then refresh from API.
        const updatedStatus = result.status || newStatus;
        const local = apps.find(item => item.id === String(a.id));
-       if(local) local.status = updatedStatus;
+       if(local){ local.status = updatedStatus; local.notes = result.notes ?? combinedNotes; }
        render();
        await loadApplications(false);
        const refreshed = apps.find(item => item.id === String(a.id));
