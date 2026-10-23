@@ -300,7 +300,65 @@ function openDrawer(id){
  <div><div class="detail-label">ID в базе</div><div class="detail-value">#${escapeHtml(a.id)}</div></div></div></div>
  <div class="drawer-section"><h3>Комментарий клиента</h3><div class="reason"><span>▧</span><span>${a.notes ? escapeHtml(a.notes) : "Комментарий не указан"}</span></div></div>
  <div class="drawer-section"><h3>Финансовая оценка</h3><p style="font-size:12px;color:#788193">Скоринговый балл, отрасль, возраст бизнеса, документы и причины решения не предоставляются текущим API. Они не рассчитываются и не отображаются как реальные данные.</p></div>
- <div class="drawer-section"><h3>Обработка заявки</h3><p style="font-size:12px;color:#788193">Подключение изменения статуса через API будет следующим этапом. Пока эта версия кабинета только читает реальные заявки и не сохраняет решения сотрудника.</p></div>`;
+ <div class="drawer-section"><h3>Обработка заявки</h3>
+ <p style="font-size:12px;color:#788193">Выберите новый статус. Изменение будет сохранено в базе через backend ALFA PULSE.</p>
+ <label for="application-status" style="display:block;font-size:12px;font-weight:600;margin:12px 0 6px">Новый статус</label>
+ <select id="application-status" style="width:100%;padding:11px;border:1px solid #d8dee8;border-radius:8px;background:#fff;color:#172033">
+   <option value="submitted">Получена</option>
+   <option value="in_review">На рассмотрении</option>
+   <option value="need_documents">Требуются документы</option>
+   <option value="offer_ready">Предложение подготовлено</option>
+   <option value="approved_demo">Условно одобрена (демо)</option>
+   <option value="rejected_demo">Условно отклонена (демо)</option>
+   <option value="contract_demo">Договор (демо)</option>
+   <option value="disbursed_demo">Выдана (демо)</option>
+ </select>
+ <button id="save-status-btn" type="button" style="width:100%;margin-top:12px;padding:12px;border:0;border-radius:8px;background:#b00020;color:#fff;font-weight:600;cursor:pointer">Сохранить статус</button>
+ <p id="status-save-message" role="status" style="font-size:12px;margin-top:10px"></p>
+ </div>`;
+ const statusSelect = $("application-status");
+ const saveButton = $("save-status-btn");
+ const statusMessage = $("status-save-message");
+ if(statusSelect) statusSelect.value = STATUS_LABELS[a.status] ? a.status : "submitted";
+ if(saveButton){
+   saveButton.onclick = async () => {
+     const newStatus = statusSelect.value;
+     saveButton.disabled = true;
+     saveButton.textContent = "Сохранение…";
+     statusMessage.textContent = "";
+     statusMessage.style.color = "";
+     try{
+       const response = await fetch(`${API_BASE}/api/applications/${encodeURIComponent(a.id)}/status`, {
+         method: "PATCH",
+         headers: {"Content-Type":"application/json", "Accept":"application/json"},
+         body: JSON.stringify({status:newStatus})
+       });
+       const result = await response.json().catch(() => ({}));
+       if(!response.ok){
+         const detail = typeof result.detail === "string" ? result.detail : JSON.stringify(result.detail || result);
+         throw new Error(`HTTP ${response.status}: ${detail}`);
+       }
+       // PATCH confirmed by backend. Update local UI immediately, then refresh from API.
+       const updatedStatus = result.status || newStatus;
+       const local = apps.find(item => item.id === String(a.id));
+       if(local) local.status = updatedStatus;
+       render();
+       await loadApplications(false);
+       const refreshed = apps.find(item => item.id === String(a.id));
+       if(refreshed && refreshed.status !== updatedStatus) refreshed.status = updatedStatus;
+       render();
+       openDrawer(a.id);
+       log(`Заявка #${a.id}: статус изменён на «${statusLabel(updatedStatus)}»`);
+       showToast("Статус сохранён на сервере");
+     }catch(error){
+       statusMessage.textContent = `Не удалось сохранить статус: ${error.message || error}`;
+       statusMessage.style.color = "#b42318";
+       saveButton.disabled = false;
+       saveButton.textContent = "Повторить сохранение";
+       console.error("ALFA PULSE status update error:", error);
+     }
+   };
+ }
  $("drawer-backdrop").classList.add("open");
 }
 function closeDrawer(){ $("drawer-backdrop").classList.remove("open"); selectedId=null; }
